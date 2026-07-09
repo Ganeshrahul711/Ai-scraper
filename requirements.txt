@@ -1,6 +1,7 @@
+Flask
 gunicorn
-flask
 pandas
 requests
 beautifulsoup4
 openpyxl
+lxml
