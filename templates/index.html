@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Scraper Dashboard</title>
+<style>
+  :root {
+    --navy: #1a2744;
+    --navy-light: #2c3e5f;
+    --accent: #2f6fed;
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --border: #e1e5ec;
+    --text: #1a2744;
+    --text-muted: #6b7280;
+    --green: #1f9d55;
+    --amber: #b5860b;
+    --red: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--navy); color: #fff; padding: 20px 28px; }
+  header h1 { margin: 0 0 4px; font-size: 20px; font-weight: 600; }
+  header p { margin: 0; font-size: 13px; color: #c4cde0; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 14px; margin: 0 0 12px; color: var(--navy); text-transform: uppercase; letter-spacing: 0.03em; }
+  .source-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .source-box { flex: 1; min-width: 260px; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .source-box h3 { margin: 0 0 4px; font-size: 15px; color: var(--navy-light); }
+  .source-box .desc { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+  .btn { background: var(--navy); color: #fff; border: none; font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: 7px; cursor: pointer; }
+  .btn:hover { background: var(--accent); }
+  .btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+  .btn.secondary { background: #fff; color: var(--navy); border: 1px solid var(--border); }
+  .btn.secondary:hover { background: var(--bg); }
+  .status-line { margin-top: 10px; font-size: 12.5px; min-height: 18px; display: flex; align-items: center; gap: 6px; }
+  .status-line.running { color: var(--amber); }
+  .status-line.done { color: var(--green); }
+  .status-line.error { color: var(--red); }
+  .spinner { width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--amber); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .actions { margin-top: 12px; display: flex; gap: 8px; }
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  select, input[type=text] { padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; background: #fff; color: var(--text); }
+  select { min-width: 190px; }
+  input[type=text] { flex: 1; min-width: 200px; }
+  .stat-bar { display: flex; gap: 20px; font-size: 13px; color: var(--text-muted); margin: 4px 0 16px; }
+  .stat-bar b { color: var(--navy); }
+  .job-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .job-card.telegram { border-left-color: #229ed9; }
+  .job-main { flex: 1; min-width: 0; }
+  .job-title { font-size: 15px; font-weight: 600; color: var(--navy); margin: 0 0 4px; }
+  .job-meta { font-size: 12.5px; color: var(--text-muted); display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; }
+  .badge.website { background: #e8f0fe; color: var(--accent); }
+  .badge.telegram { background: #e3f4fb; color: #229ed9; }
+  .apply-btn { flex-shrink: 0; background: var(--navy); color: #fff; text-decoration: none; font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: 7px; white-space: nowrap; }
+  .apply-btn:hover { background: var(--accent); }
+  .apply-btn.disabled { background: var(--border); color: var(--text-muted); pointer-events: none; }
+  .no-link-reason { font-size: 12px; color: var(--amber); margin-top: 4px; }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state h3 { color: var(--navy); margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Job Scraper Dashboard</h1>
+  <p>Run your scrapers straight from here, then browse and click through to every job.</p>
+</header>
+
+<div class="container">
+
+  <div class="panel">
+    <h2>1. Scrape</h2>
+    <div class="source-row">
+      <div class="source-box">
+        <h3>🌐 Website — job4freshers.co.in</h3>
+        <div class="desc">Scrapes both listing pages and every individual post for apply links.</div>
+        <button class="btn" id="scrapeWebsiteBtn" onclick="startScrape('website')">Scrape now</button>
+        <div class="status-line" id="statusWebsite"></div>
+        <div class="actions">
+          <button class="btn secondary" id="viewWebsiteBtn" onclick="viewResults('website')" disabled>View results</button>
+        </div>
+      </div>
+      <div class="source-box">
+        <h3>📨 Telegram Scraper</h3>
+        <div class="desc">Scrapes the public channel preview and parses job posts.</div>
+        <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 13px; color: var(--navy-light); font-weight: bold;">@</span>
+          <input type="text" id="telegramChannelInput" value="work4freshers" placeholder="channel_name" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%;">
+        </div>
+        <button class="btn" id="scrapeTelegramBtn" onclick="startScrape('telegram')">Scrape now</button>
+        <div class="status-line" id="statusTelegram"></div>
+        <div class="actions">
+          <button class="btn secondary" id="viewTelegramBtn" onclick="viewResults('telegram')" disabled>View results</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>2. Filter</h2>
+    <div class="controls">
+      <select id="sourceFilter" onchange="render()">
+        <option value="all">All sources</option>
+        <option value="website">Website scraped</option>
+        <option value="telegram">Telegram scraped</option>
+      </select>
+      <input type="text" id="searchBox" placeholder="Search by title, company, keyword..." oninput="render()">
+    </div>
+  </div>
+
+  <div class="stat-bar" id="statBar"></div>
+  <div id="jobList"></div>
+
+</div>
+
+<script>
+let dataSets = { website: [], telegram: [] };
+let pollTimers = { website: null, telegram: null };
+
+function escapeHtml(str) {
+  return (str || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function normalize(row, source) {
+  if (source === 'website') {
+    const originalLink = (row["Apply Link (Original)"] || "").trim();
+    const redirectedLink = (row["Apply Link (Redirected/Company Site)"] || "").trim();
+    const link = redirectedLink && redirectedLink.startsWith("http") ? redirectedLink : null;
+
+    let noLinkReason = null;
+    if (!link) {
+      if (originalLink.includes("Direct Walk-in") || redirectedLink.includes("Direct Walk-in")) {
+        noLinkReason = "Walk-in job — no apply link was posted";
+      } else if (!originalLink) {
+        noLinkReason = "No apply-style link was found anywhere in the post content";
+      } else if (!redirectedLink) {
+        noLinkReason = "A link was found, but following its redirect failed (site may be down or blocking requests)";
+      } else {
+        noLinkReason = "The resolved link didn't look like a valid URL";
+      }
+    }
+
+    return {
+      title: row["Job Post Title"] || "Untitled listing",
+      company: "",
+      location: "",
+      extra: row["Apply Link Text"] || "",
+      secondaryLink: row["Job Post URL"] || "",
+      link: link,
+      noLinkReason: noLinkReason,
+      source: "website",
+      raw: row
+    };
+  } else {
+    const tgApplyLink = (row["Telegram Apply Link (Original)"] || "").trim();
+    const actualApplyLink = (row["Actual Apply Link"] || "").trim();
+    const finalLink = (row["Final Company Application URL"] || "").trim();
+    const linkSource = (row["Link Source/Text"] || "").trim();
+    const link = finalLink && finalLink.startsWith("http") ? finalLink : null;
+
+    let noLinkReason = null;
+    if (!link) {
+      if (!tgApplyLink) {
+        noLinkReason = "No link was included in this Telegram message";
+      } else if (linkSource === "Failed to load blog post") {
+        noLinkReason = "The linked blog post page failed to load while looking up the real apply link";
+      } else if (linkSource === "No content div found in blog") {
+        noLinkReason = "The blog post loaded, but no apply link could be found inside it";
+      } else if (actualApplyLink.includes("Direct Walk-in") || linkSource === "Walk-in") {
+        noLinkReason = "Walk-in job — no apply link was provided";
+      } else if (!actualApplyLink) {
+        noLinkReason = "Could not resolve a usable link from this message";
+      } else {
+        noLinkReason = "The resolved link didn't look like a valid URL";
+      }
+    }
+
+    return {
+      title: row["Role/Post Name"] || "Untitled listing",
+      company: row["Company Name"] || "",
+      location: row["Location"] || "",
+      extra: (row["Salary"] ? ("Salary: " + row["Salary"]) : "") + (row["Experience"] ? ("  ·  " + row["Experience"]) : ""),
+      secondaryLink: row["Telegram Post URL"] || "",
+      link: link,
+      noLinkReason: noLinkReason,
+      source: "telegram",
+      raw: row
+    };
+  }
+}
+
+function setStatusUI(source, st) {
+  const el = document.getElementById('status' + (source === 'website' ? 'Website' : 'Telegram'));
+  const scrapeBtn = document.getElementById('scrape' + (source === 'website' ? 'Website' : 'Telegram') + 'Btn');
+  const viewBtn = document.getElementById('view' + (source === 'website' ? 'Website' : 'Telegram') + 'Btn');
+  el.className = 'status-line ' + st.state;
+  if (st.state === 'running') {
+    el.innerHTML = '<span class="spinner"></span> ' + escapeHtml(st.message);
+    scrapeBtn.disabled = true;
+  } else if (st.state === 'done') {
+    el.innerHTML = '✅ ' + escapeHtml(st.message);
+    scrapeBtn.disabled = false;
+    viewBtn.disabled = false;
+  } else if (st.state === 'error') {
+    el.innerHTML = '⚠️ ' + escapeHtml(st.message);
+    scrapeBtn.disabled = false;
+  } else {
+    el.innerHTML = '';
+    scrapeBtn.disabled = false;
+  }
+}
+
+function startScrape(source) {
+  let url = '/api/scrape/' + source;
+  let options = { method: 'POST' };
+  
+  if (source === 'telegram') {
+    const channel = document.getElementById('telegramChannelInput').value.trim();
+    if (!channel) {
+      alert('Please enter a Telegram channel name');
+      return;
+    }
+    options.headers = { 'Content-Type': 'application/json' };
+    options.body = JSON.stringify({ channel: channel });
+  }
+
+  fetch(url, options)
+    .then(r => r.json())
+    .then(res => {
+      if (res.error) { alert(res.error); return; }
+      pollStatus(source);
+    });
+}
+
+function pollStatus(source) {
+  if (pollTimers[source]) clearInterval(pollTimers[source]);
+  pollTimers[source] = setInterval(() => {
+    fetch('/api/status/' + source).then(r => r.json()).then(st => {
+      setStatusUI(source, st);
+      if (st.state !== 'running') {
+        clearInterval(pollTimers[source]);
+        pollTimers[source] = null;
+        if (st.state === 'done') loadData(source, false);
+      }
+    });
+  }, 2000);
+}
+
+function loadData(source, autoRender) {
+  fetch('/api/data/' + source).then(r => r.json()).then(res => {
+    dataSets[source] = res.rows || [];
+    const viewBtn = document.getElementById('view' + (source === 'website' ? 'Website' : 'Telegram') + 'Btn');
+    if (dataSets[source].length > 0) viewBtn.disabled = false;
+    if (autoRender) render();
+  });
+}
+
+function viewResults(source) {
+  document.getElementById('sourceFilter').value = source;
+  loadData(source, true);
+}
+
+function render() {
+  const sourceFilter = document.getElementById('sourceFilter').value;
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+
+  let combined = [];
+  if (sourceFilter === 'all' || sourceFilter === 'website') combined = combined.concat(dataSets.website.map(r => normalize(r, 'website')));
+  if (sourceFilter === 'all' || sourceFilter === 'telegram') combined = combined.concat(dataSets.telegram.map(r => normalize(r, 'telegram')));
+
+  if (search) {
+    combined = combined.filter(job => Object.values(job.raw).join(' ').toLowerCase().includes(search));
+  }
+
+  const statBar = document.getElementById('statBar');
+  statBar.innerHTML = `<span><b>${combined.length}</b> shown</span><span>Website loaded: <b>${dataSets.website.length}</b></span><span>Telegram loaded: <b>${dataSets.telegram.length}</b></span>`;
+
+  const listEl = document.getElementById('jobList');
+  if (combined.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><h3>No jobs to show yet</h3><p>Click "Scrape now" above, or "View results" if you already have data.</p></div>`;
+    return;
+  }
+
+  listEl.innerHTML = combined.map(job => {
+    const badgeClass = job.source === 'website' ? 'website' : 'telegram';
+    const badgeLabel = job.source === 'website' ? 'Website' : 'Telegram';
+    const cardClass = job.source === 'telegram' ? 'job-card telegram' : 'job-card';
+    const metaBits = [];
+    if (job.company) metaBits.push(`<span>🏢 ${escapeHtml(job.company)}</span>`);
+    if (job.location) metaBits.push(`<span>📍 ${escapeHtml(job.location)}</span>`);
+    if (job.extra) metaBits.push(`<span>${escapeHtml(job.extra)}</span>`);
+    const linkHtml = job.link
+      ? `<a class="apply-btn" href="${job.link}" target="_blank" rel="noopener">View / Apply →</a>`
+      : `<span class="apply-btn disabled" title="${escapeHtml(job.noLinkReason || '')}">No link</span>`;
+    const reasonHtml = job.noLinkReason
+      ? `<div class="no-link-reason">⚠ ${escapeHtml(job.noLinkReason)}</div>`
+      : '';
+    return `
+      <div class="${cardClass}">
+        <div class="job-main">
+          <div class="job-meta"><span class="badge ${badgeClass}">${badgeLabel}</span></div>
+          <p class="job-title">${escapeHtml(job.title)}</p>
+          <div class="job-meta">${metaBits.join('')}</div>
+          ${reasonHtml}
+        </div>
+        ${linkHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+// On page load, check for existing status/data from a previous run
+['website', 'telegram'].forEach(source => {
+  fetch('/api/status/' + source).then(r => r.json()).then(st => setStatusUI(source, st));
+  loadData(source, false);
+});
+render();
+</script>
+
+</body>
+</html>
